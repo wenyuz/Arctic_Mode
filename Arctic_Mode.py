@@ -177,18 +177,20 @@ def eof_norm_mask(data,num,mask):
     
 def get_globe_mean(var,lat):
     aa=np.cos(lat/180*np.pi)
+    index = np.argmax(lat>=-20) #mask out some nan values in OBS Ts
+    aa[:index] = 0.
     if len(np.shape(var))==3:
         bb=var*aa[None,None,:]
-        cc=np.sum(bb,2)
-        dd=np.sum(aa)
+        cc=np.nansum(bb,2)
+        dd=np.nansum(aa)
     if len(np.shape(var))==2:
         bb=var*aa[None,:]
-        cc=np.sum(bb,1)
-        dd=np.sum(aa)
+        cc=np.nansum(bb,1)
+        dd=np.nansum(aa)
     if len(np.shape(var))==1:
         bb=var*aa
-        cc=np.sum(bb)
-        dd=np.sum(aa)
+        cc=np.nansum(bb)
+        dd=np.nansum(aa)
     return cc/dd
 
 def get_arctic_mean(var,lat):
@@ -247,11 +249,33 @@ mask_land=aa.mask
 
 # In[5]:
 
+obs= ['HadCRUT5','Berkeley','GISTEMP']
+ts_2d_ann={}
+for i in range(len(obs)):
 
-os.chdir('/Volumes/Xiao/observations/ts/Berkeley')
-filename = glob.glob('*1940*1deg.ann.nc')[0]
-f = Dataset(filename, 'r')
-ts_2d_ann_obs= f.variables['temperature'][10:,:] 
+    os.chdir('/Volumes/Xiao/observations/ts/'+obs[i])
+    if obs[i] == 'ERA5':
+        var = 'skt'
+    if obs[i] == 'HadCRUT5':
+        var = 'tas_mean'
+    if obs[i] == 'Berkeley':
+        var = 'temperature'
+    if obs[i] == 'GISTEMP':
+        var = 'tempanomaly'
+    
+    filename = glob.glob('*1940*1deg.ann.filled.nc')[0]
+    f = Dataset(filename, 'r')
+    exec('ts_2d_ann[obs[i]]= f.variables[\''+var+'\'][10:,:]') 
+ts_2d_ann_obs_ = np.zeros((len(obs),73,180,360))
+for i in range(len(obs)):
+    aa=ts_2d_ann[obs[i]]
+    ts_2d_ann_obs_[i,:,:,:] = aa - np.mean(aa[10:40,:,:],0)[None,:,:]  #1950-2023
+ts_2d_ann_obs = np.nanmean(ts_2d_ann_obs_[:,::],0)
+
+# os.chdir('/Volumes/Xiao/observations/ts/Berkeley')
+# filename = glob.glob('*1940*1deg.ann.nc')[0]
+# f = Dataset(filename, 'r')
+# ts_2d_ann_obs= f.variables['temperature'][10:,:] 
 
 
 # In[6]:
